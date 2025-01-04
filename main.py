@@ -5,64 +5,74 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# 加载环境变量
+# Load environment variables
 load_dotenv()
 
-# 配置日志
+# Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO))
 logger = logging.getLogger(__name__)
 
-# 初始化 Flask 应用
+# Initialize Flask app
 app = Flask(__name__)
 
-# 配置应用
+# App configuration
 app.config["THRESHOLD"] = float(os.getenv("THRESHOLD", 0.136868298))
 app.config["MODEL_PATH"] = os.getenv("MODEL_PATH", os.path.join(os.path.dirname(__file__), "rf_model.pkl"))
 
-# 验证模型路径
+# Validate model path
 if not os.path.exists(app.config["MODEL_PATH"]):
-    raise FileNotFoundError(f"模型文件未找到：{app.config['MODEL_PATH']}")
+    raise FileNotFoundError(f"Model file not found: {app.config['MODEL_PATH']}")
 
-# 加载模型
+# Load model
 try:
-    logger.info(f"正在加载模型文件：{app.config['MODEL_PATH']}")
+    logger.info(f"Loading model file: {app.config['MODEL_PATH']}")
     model = joblib.load(app.config["MODEL_PATH"])
     if not hasattr(model, "predict"):
-        raise ValueError("加载的模型无效，请确认模型文件是否正确！")
+        raise ValueError("Loaded model is invalid. Please verify the model file!")
 except Exception as e:
-    logger.error(f"加载模型时发生错误：{e}")
-    raise RuntimeError(f"无法加载模型：{e}")
+    logger.error(f"Error loading model: {e}")
+    raise RuntimeError(f"Unable to load model: {e}")
 
 @app.route("/")
 def index():
-    """渲染主页"""
+    """Render home page"""
     try:
         return render_template("index.html")
     except Exception as e:
-        logger.error(f"模板渲染错误：{e}")
-        return f"模板渲染错误：{e}", 500
+        logger.error(f"Template rendering error: {e}")
+        return f"Template rendering error: {e}", 500
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """处理预测请求"""
+    """Handle prediction request"""
     try:
-        # 提取并验证输入数据
+        # Extract and validate input data
         input_data = validate_input(request.form)
-        
-        # 执行模型预测
+
+        # Perform prediction
         prediction = make_prediction(input_data)
-        
-        return jsonify(prediction)
+
+        # Render visualization page and pass prediction results
+        return render_template("visualization.html", prediction=prediction)
     except ValueError as ve:
-        logger.warning(f"输入验证失败：{ve}")
-        return jsonify({"error": "输入数据无效", "details": str(ve)}), 400
+        logger.warning(f"Input validation failed: {ve}")
+        return jsonify({"error": "Invalid input data", "details": str(ve)}), 400
     except Exception as e:
-        logger.error(f"预测处理失败：{e}")
-        return jsonify({"error": "服务器错误", "details": str(e)}), 500
+        logger.error(f"Prediction processing failed: {e}")
+        return jsonify({"error": "Server error", "details": str(e)}), 500
+
+@app.route("/visualization")
+def visualization():
+    """Render risk visualization page"""
+    try:
+        return render_template("visualization.html")
+    except Exception as e:
+        logger.error(f"Visualization page rendering error: {e}")
+        return f"Visualization page rendering error: {e}", 500
 
 def validate_input(form):
-    """验证并解析输入数据"""
+    """Validate and parse input data"""
     try:
         gender = int(form.get("gender", 0))
         age = int(form.get("age", 0))
@@ -75,38 +85,36 @@ def validate_input(form):
         drink = int(form.get("drink", 0))
         fit = int(form.get("fit", 0))
 
-        # 检查值是否在预期范围内
+        # Check if values are within expected range
         if not (0 <= gender <= 1):
-            raise ValueError("性别值必须为 0 或 1")
+            raise ValueError("Gender value must be 0 or 1")
         if not (0 <= age <= 3):
-            raise ValueError("年龄值必须在 0-3 之间")
+            raise ValueError("Age value must be between 0-3")
         if not (0.0 <= bmi <= 50.0):
-            raise ValueError("BMI 值必须在 0.0-50.0 之间")
+            raise ValueError("BMI value must be between 0.0-50.0")
         if not (0 <= residence <= 1):
-            raise ValueError("居住地值必须为 0 或 1")
+            raise ValueError("Residence value must be 0 or 1")
         if not all(0 <= v <= 1 for v in [fx, bm, lwy, smoke, drink, fit]):
-            raise ValueError("二进制输入值必须为 0 或 1")
+            raise ValueError("Binary input values must be 0 or 1")
 
         return np.array([[gender, age, bmi, residence, fx, bm, lwy, smoke, drink, fit]])
     except ValueError as e:
-        raise ValueError(f"输入数据验证失败：{e}")
+        raise ValueError(f"Input data validation failed: {e}")
 
 def make_prediction(input_data):
-    """使用模型进行预测并生成结果"""
+    """Make predictions using the model and generate results"""
     try:
         if hasattr(model, "predict_proba"):
             probability = model.predict_proba(input_data)[0, 1]
             risk = probability * 100
-            if probability > 0.9:
-                level, recommendation = "高风险", "风险非常高！建议立即检查。"
-            elif probability > app.config["THRESHOLD"]:
-                level, recommendation = "中等风险", "风险较高，建议尽快检查。"
+            if probability > app.config["THRESHOLD"]:
+                level, recommendation = "High Risk", "High risk! Immediate colonoscopy is recommended."
             else:
-                level, recommendation = "低风险", "风险较低，建议观察并定期复查。"
+                level, recommendation = "Low Risk", "Low risk. Observation and regular follow-ups are recommended."
         else:
             prediction = model.predict(input_data)
             risk = prediction[0] * 100
-            level, recommendation = "未知风险", "模型不支持概率预测，请检查模型类型。"
+            level, recommendation = "Unknown Risk", "The model does not support probability prediction. Please check the model type."
 
         return {
             "risk": round(risk, 2),
@@ -116,10 +124,10 @@ def make_prediction(input_data):
             "threshold": app.config["THRESHOLD"]
         }
     except Exception as e:
-        raise RuntimeError(f"预测失败：{e}")
+        raise RuntimeError(f"Prediction failed: {e}")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app_debug = os.getenv("APP_DEBUG", "false").lower() == "true"
-    logger.info(f"应用正在运行，监听端口：{port}，调试模式：{app_debug}")
+    logger.info(f"App is running on port {port}, debug mode: {app_debug}")
     app.run(host="0.0.0.0", port=port, debug=app_debug, threaded=True)
