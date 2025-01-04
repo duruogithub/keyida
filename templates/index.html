@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACN Risk Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div style="text-align: right; margin-bottom: 10px;">
+            <button id="lang-en">English</button>
+            <button id="lang-cn">中文</button>
+        </div>
+        <h1>ACN Risk Prediction</h1>
+        <form action="/predict" method="POST">
+            <label for="gender">Gender:</label>
+            <select id="gender" name="gender" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">Female</option>
+                <option value="1">Male</option>
+            </select>
+            <label for="age">Age:</label>
+            <select id="age" name="age" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">40–49</option>
+                <option value="1">50–59</option>
+                <option value="2">60–69</option>
+                <option value="3">70–74</option>
+            </select>
+            <label for="bmi">BMI:</label>
+            <select id="bmi" name="bmi" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">Less than 24</option>
+                <option value="1">24 or greater</option>
+            </select>
+            <label for="residence">Residence:</label>
+            <select id="residence" name="residence" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">Central urban</option>
+                <option value="1">Agriculture-related areas</option>
+            </select>
+            <label for="fx">History of chronic diarrhea:</label>
+            <select id="fx" name="fx" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+            </select>
+            <label for="bm">History of chronic constipation:</label>
+            <select id="bm" name="bm" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+            </select>
+            <label for="lwy">History of chronic appendicitis or appendectomy:</label>
+            <select id="lwy" name="lwy" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">No</option>
+                <option value="1">Yes</option>
+            </select>
+            <label for="smoke">Smoking status:</label>
+            <select id="smoke" name="smoke" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">Never smokers</option>
+                <option value="1">Current or former smokers</option>
+            </select>
+            <label for="drink">Alcohol consumption:</label>
+            <select id="drink" name="drink" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">Never drinkers</option>
+                <option value="1">Drinkers</option>
+            </select>
+            <label for="fit">FIT Test Result:</label>
+            <select id="fit" name="fit" required>
+                <option value="" disabled selected>--请选择--</option>
+                <option value="0">Negative</option>
+                <option value="1">Positive</option>
+            </select>
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
